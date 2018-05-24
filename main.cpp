@@ -16,8 +16,10 @@ using namespace cv;
 using namespace std;
 
 
-int main( int argc, char** argv)
-{
+static bool s_finished = false;  //declare the thread as in process
+
+
+void read_comp() {
     
     //int cntr = 1;
     //std::string i = "/Users/andrewadams/Desktop/pinto/sloth_comp_read.cpp/sloth_comp_read.cpp/sloths/images (" + std::to_string(++cntr) + ").jpg";
@@ -25,7 +27,7 @@ int main( int argc, char** argv)
     
     
     //grabs the image from the root file, it's also possible to just include your image directory
-    
+
     Mat read_image;
     read_image = imread("/Users/andrewadams/Desktop/pinto/sloth_comp_read.cpp/sloth_comp_read.cpp/sloths/images.jpg", cv::IMREAD_COLOR);
     read_image = imread("/Users/andrewadams/Desktop/pinto/sloth_comp_read.cpp/sloth_comp_read.cpp/sloths/images (1).jpg", cv::IMREAD_COLOR);
@@ -38,7 +40,7 @@ int main( int argc, char** argv)
     if(! read_image.data )   // Check for invalid input
     {
         cout <<  "No sloths in these woods" << std::endl ;
-        return -1;
+        return;
     }
     
     Mat compress;
@@ -67,7 +69,7 @@ int main( int argc, char** argv)
     
     
     //apply the changes you made to your images quality by calling the char const up above.
-    
+ 
     //std::string out = ("/Users/andrewadams/Desktop/pinto/sloth_comp_read.cpp/sloth_comp_read.cpp/squishedsloths/out" + std::to_string(++cntr) + ".jpg");
     //line 27
     
@@ -77,7 +79,80 @@ int main( int argc, char** argv)
     save = imwrite("/Users/andrewadams/Desktop/pinto/sloth_comp_read.cpp/sloth_comp_read.cpp/squishedsloths/out2.jpg", compress2);
     save = imwrite("/Users/andrewadams/Desktop/pinto/sloth_comp_read.cpp/sloth_comp_read.cpp/squishedsloths/out3.jpg", compress3);
     //saves the compression above
+    
+    
+    while (!s_finished) {
+        std::cout << "working... \n";
+        std::this_thread::sleep_for(1s);
+    }
+    //thread wait
+};
 
 
+
+
+int main( int argc, char** argv)
+{
+    
+    std::thread worker(read_comp);
+    
+    
+    std::cin.get();
+    s_finished = true;
+    
+    worker.join();
+    std::cout << "Finished" << std::endl;
+    
+    std::cin.get();
+    
+    
+  
+    exit(0);
 }
 
+//thread joiner
+
+
+net::serversocket::~serversocket() {
+    close();
+}
+
+int net::serversocket::listen() {
+    
+    net::socketaddress* sockaddr = new net::socketaddress("http://localhost:8888/notebooks/Untitled1.ipynb?kernel_name=conda-root-py", 8888);
+    struct sockaddr_in addr = sockaddr->get_struct();
+    
+    socketfd = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    
+    if (socketfd == -1) {
+        return errno;
+    }
+    
+    int yes = 1;
+    if (::setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) != 0) {
+        close();
+        return errno;
+    }
+    
+    if (::bind(socketfd, (struct sockaddr*)&addr, sizeof(struct sockaddr)) != 0) {
+        close();
+        return errno;
+    }
+    
+    if (::listen(socketfd, backlog) != 0) {
+        close();
+        return errno;
+    }
+    
+    return 0;
+}
+
+net::socket* net::serversocket::accept() {
+    struct sockaddr_in from;
+    socklen_t l = sizeof(from);
+    int clientfd = ::accept(socketfd, (struct sockaddr*)&from, &l);
+    
+    return new net::socket(clientfd, from);
+}
+
+//server socket that goes to my jupyter virtual environment. Note: it's important to set jupyter to run after the the host accepts the client socket, or else it'll just sit there doing nothing.
